@@ -34,16 +34,14 @@ jobs:
         
     - name: Build full LiteRT-LM library
       run: |
-        # Build the JNI library (includes full runtime)
         bazel build --config=android_arm64 //kotlin/java/com/google/ai/edge/litertlm/jni:litertlm_jni
         
     - name: Package artifacts
       run: |
-        mkdir -p artifacts
         mkdir -p artifacts/include
         
-        # Copy all shared libraries
-        find bazel-bin -name "*.so" -exec cp {} artifacts/ \;
+        # Copy from exact known path
+        cp bazel-bin/kotlin/java/com/google/ai/edge/litertlm/jni/liblitertlm_jni.so artifacts/
         
         # Copy header files
         cp c/engine.h artifacts/include/
