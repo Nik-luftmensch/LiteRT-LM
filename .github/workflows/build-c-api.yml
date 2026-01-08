@@ -32,20 +32,31 @@ jobs:
       run: |
         echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
         
-    - name: Build C API for Android ARM64
+    - name: Build full LiteRT-LM library
       run: |
-        bazel build --config=android_arm64 //c:engine
+        # Build the JNI library (includes full runtime)
+        bazel build --config=android_arm64 //kotlin/java/com/google/ai/edge/litertlm/jni:litertlm_jni
         
     - name: Package artifacts
       run: |
         mkdir -p artifacts
-        cp -r bazel-bin/c/* artifacts/ || true
-        find bazel-bin -name "*.so" -exec cp {} artifacts/ \; || true
-        find bazel-bin -name "*.a" -exec cp {} artifacts/ \; || true
+        mkdir -p artifacts/include
+        
+        # Copy all shared libraries
+        find bazel-bin -name "*.so" -exec cp {} artifacts/ \;
+        
+        # Copy header files
+        cp c/engine.h artifacts/include/
+        cp c/litert_lm_logging.h artifacts/include/ || true
+        
+        # List what we got
+        echo "=== Artifacts ==="
         ls -la artifacts/
+        echo "=== Headers ==="
+        ls -la artifacts/include/
         
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: litert-lm-c-api-android-arm64
+        name: litert-lm-android-arm64-full
         path: artifacts/
