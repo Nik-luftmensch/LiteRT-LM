@@ -1,0 +1,51 @@
+name: Build C API Shared Library
+
+on:
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  build-android-arm64:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+        
+    - name: Install Bazelisk
+      run: |
+        curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64 -o /usr/local/bin/bazel
+        chmod +x /usr/local/bin/bazel
+        
+    - name: Setup Android NDK
+      uses: nttld/setup-ndk@v1
+      id: setup-ndk
+      with:
+        ndk-version: r28b
+        
+    - name: Set NDK environment
+      run: |
+        echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
+        
+    - name: Build C API for Android ARM64
+      run: |
+        bazel build --config=android_arm64 //c:engine
+        
+    - name: Package artifacts
+      run: |
+        mkdir -p artifacts
+        cp -r bazel-bin/c/* artifacts/ || true
+        find bazel-bin -name "*.so" -exec cp {} artifacts/ \; || true
+        find bazel-bin -name "*.a" -exec cp {} artifacts/ \; || true
+        ls -la artifacts/
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: litert-lm-c-api-android-arm64
+        path: artifacts/
