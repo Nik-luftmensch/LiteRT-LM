@@ -1,0 +1,42 @@
+name: Build LiteRT-LM Android NPU
+
+on:
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout LiteRT-LM
+        uses: actions/checkout@v4
+        with:
+          repository: google-ai-edge/LiteRT-LM
+          ref: v0.8.1
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Setup Android NDK
+        uses: android-actions/setup-android@v3
+      
+      - name: Install NDK r28
+        run: |
+          sdkmanager --install "ndk;28.0.12674087"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.0.12674087" >> $GITHUB_ENV
+      
+      - name: Setup Bazelisk
+        uses: bazelbuild/setup-bazelisk@v3
+      
+      - name: Build litert_lm_main for Android ARM64
+        run: |
+          bazel build --config=android_arm64 //runtime/engine:litert_lm_main
+      
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: litert_lm_main_android_arm64
+          path: bazel-bin/runtime/engine/litert_lm_main
