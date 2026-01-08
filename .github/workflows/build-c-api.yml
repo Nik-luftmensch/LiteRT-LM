@@ -1,7 +1,7 @@
 name: Build C API Shared Library
 
 on:
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:
 
 jobs:
   build-android-arm64:
@@ -19,8 +19,8 @@ jobs:
         
     - name: Install Bazelisk
       run: |
-        curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64 -o /usr/local/bin/bazel
-        chmod +x /usr/local/bin/bazel
+        sudo curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64 -o /usr/local/bin/bazel
+        sudo chmod +x /usr/local/bin/bazel
         
     - name: Setup Android NDK
       uses: nttld/setup-ndk@v1
