@@ -1,0 +1,116 @@
+name: Build LiteRT-LM with NPU Support
+ 
+on:
+
+  workflow_dispatch:
+ 
+jobs:
+
+  build:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+
+      - name: Checkout LiteRT-LM
+
+        uses: actions/checkout@v4
+
+        with:
+
+          repository: google-ai-edge/LiteRT-LM
+
+          ref: main  # Use main branch for latest NPU support
+
+      - name: Setup Java 17
+
+        uses: actions/setup-java@v4
+
+        with:
+
+          distribution: 'temurin'
+
+          java-version: '17'
+
+      - name: Setup Android SDK
+
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK r28
+
+        run: |
+
+          sdkmanager --install "ndk;28.0.12674087"
+
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.0.12674087" >> $GITHUB_ENV
+
+      - name: Setup Bazelisk
+
+        uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Cache Bazel
+
+        uses: actions/cache@v4
+
+        with:
+
+          path: ~/.cache/bazel
+
+          key: bazel-${{ runner.os }}-${{ hashFiles('.bazelversion', 'WORKSPACE', 'MODULE.bazel') }}
+
+          restore-keys: |
+
+            bazel-${{ runner.os }}-
+
+      - name: Build litert_lm_main for Android ARM64
+
+        run: |
+
+          bazel build --config=android_arm64 //runtime/engine:litert_lm_main
+
+      - name: Build Qualcomm NPU Dispatch Library
+
+        run: |
+
+          bazel build --config=android_arm64 @litert//litert/vendors/qualcomm/dispatch:dispatch_api_so
+
+      - name: Collect Build Artifacts
+
+        run: |
+
+          mkdir -p artifacts
+
+          # Copy main binary
+
+          cp bazel-bin/runtime/engine/litert_lm_main artifacts/
+
+          # Find and copy dispatch library
+
+          find bazel-bin -name "libLiteRtDispatch_Qualcomm.so" -exec cp {} artifacts/ \; 2>/dev/null || true
+
+          find bazel-bin -name "*dispatch*.so" -exec cp {} artifacts/ \; 2>/dev/null || true
+
+          # List what we got
+
+          echo "=== Build Artifacts ==="
+
+          ls -la artifacts/
+
+          # Show binary info
+
+          echo "=== Binary Info ==="
+
+          file artifacts/litert_lm_main
+
+      - name: Upload Artifacts
+
+        uses: actions/upload-artifact@v4
+
+        with:
+
+          name: litert-lm-npu-android-arm64
+
+          path: artifacts/
+
+          retention-days: 30
+ 
