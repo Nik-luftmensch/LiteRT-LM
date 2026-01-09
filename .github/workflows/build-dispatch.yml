@@ -1,0 +1,55 @@
+name: Build Qualcomm Dispatch Library
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - name: Checkout LiteRT-LM
+        uses: actions/checkout@v4
+        with:
+          repository: google-ai-edge/LiteRT-LM
+          ref: main
+      
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      
+      - name: Install Android NDK r28
+        run: |
+          sdkmanager --install "ndk;28.0.12674087"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.0.12674087" >> $GITHUB_ENV
+      
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+      
+      - name: Setup Bazelisk
+        uses: bazelbuild/setup-bazelisk@v3
+      
+      - name: Build Qualcomm Dispatch Library
+        run: |
+          bazel build --config=android_arm64 @litert//litert/vendors/qualcomm/dispatch:dispatch_api_so
+      
+      - name: Find and collect dispatch library
+        run: |
+          mkdir -p artifacts
+          find bazel-bin -name "*Dispatch*.so" -exec cp {} artifacts/ \;
+          find bazel-bin -name "*dispatch*.so" -exec cp {} artifacts/ \;
+          ls -la artifacts/
+      
+      - name: Upload Dispatch Library
+        uses: actions/upload-artifact@v4
+        with:
+          name: qualcomm-dispatch-library
+          path: artifacts/
+          retention-days: 30
